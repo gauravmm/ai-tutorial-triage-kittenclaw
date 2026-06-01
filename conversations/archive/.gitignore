@@ -1,0 +1,3 @@
+# Keep this directory; never commit archived conversations.
+*
+!.gitignore

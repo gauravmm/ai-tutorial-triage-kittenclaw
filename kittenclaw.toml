@@ -1,0 +1,38 @@
+# Which preset to use if --preset isn't passed on the CLI.
+default_preset = "opencode"
+
+# OpenCode Zen: curated free models behind an OpenAI-compatible endpoint at
+# opencode.ai/zen. Free signup gives the key (OPENCODE_API_KEY); each student
+# uses their own account. deepseek-v4-flash-free tool-calls reliably in testing.
+# Caveat: the free models are a "limited time" promo and may use prompts for
+# training, so do not send confidential data through them.
+[models.opencode]
+base_url = "https://opencode.ai/zen/v1"
+model = "deepseek-v4-flash-free"
+max_context_tokens = 24000
+max_response_tokens = 4096
+api_key = "${OPENCODE_API_KEY}"
+
+# Google AI Studio via its OpenAI-compatible endpoint. Free signup at
+# aistudio.google.com gives the key (GEMINI_API_KEY); no card, and the free
+# tier does not expire. gemini-3.1-flash-lite tool-calls cleanly and fast
+# through the compat endpoint. Free tier is ~500 requests/day per account, so
+# each student signs up their own. (gemma-4-31b-it has a higher 1.5k/day limit
+# but leaks <thought> tags into message.content via this endpoint, so we pin
+# Flash-Lite instead.)
+[models.gemini]
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+model = "gemini-3.1-flash-lite"
+max_context_tokens = 24000
+max_response_tokens = 4096
+api_key = "${GEMINI_API_KEY}"
+
+# OpenRouter's catch-all `openrouter/free` router picks a free model
+# at random and filters for tool-calling support per request. Free signup at
+# openrouter.ai gives the key; no model pinning needed.
+[models.openrouter]
+base_url = "https://openrouter.ai/api/v1"
+model = "openrouter/free"
+max_context_tokens = 24000
+max_response_tokens = 4096
+api_key = "${OPENROUTER_API_KEY}"

@@ -1,0 +1,49 @@
+# Secrets
+.env
+
+# Original logo source - only the optimized .webp is tracked
+kittenclaw_orig.png
+
+# Runtime conversation state (per-student, ephemeral)
+conversations/*.jsonl
+conversations/archive/*.jsonl
+
+# Instructor-only reference prompt (the worked-good triage bot). Kept local so
+# it is not in student forks; drop it in over SYSTEM.md to demo the "after".
+good.SYSTEM.md
+
+# Integration proposal - working doc, not part of the student repo.
+SPEC.md
+
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# uv / virtualenv
+.venv/
+venv/
+env/
+
+# Test / type-check / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+.python-history
+
+# OS junk
+.DS_Store
+Thumbs.db

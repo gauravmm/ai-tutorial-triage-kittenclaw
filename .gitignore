@@ -4,9 +4,8 @@
 # Original logo source - only the optimized .webp is tracked
 kittenclaw_orig.png
 
-# Runtime conversation state (per-student, ephemeral)
-conversations/*.jsonl
-conversations/archive/*.jsonl
+# Runtime conversation state (per-student, ephemeral) is ignored by
+# conversations/.gitignore and conversations/archive/.gitignore.
 
 # Instructor-only reference prompt (the worked-good triage bot). Kept local so
 # it is not in student forks; drop it in over SYSTEM.md to demo the "after".

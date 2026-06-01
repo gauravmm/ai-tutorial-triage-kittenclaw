@@ -1,4 +1,19 @@
 {
+  "// files.exclude": "Hide plumbing from the Explorer so students focus on SYSTEM.md, the kittenclaw/ runtime, and the reporter skill. .env / .env.example stay visible (students edit them); so does kittenclaw.toml (model presets).",
+  "files.exclude": {
+    "**/.git": true,
+    "**/__pycache__": true,
+    ".gitignore": true,
+    ".markdownlint.json": true,
+    ".python-version": true,
+    ".devcontainer": true,
+    ".vscode": true,
+    ".venv": true,
+    "uv.lock": true,
+    "pyproject.toml": true,
+    "kittenclaw.webp": true,
+    "**/*.egg-info": true
+  },
   "cSpell.words": [
     "agentic",
     "aistudio",

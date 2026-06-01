@@ -85,17 +85,22 @@ def _interpolate(value: Any) -> Any:
 
 
 def load_config(preset_name: str | None = None) -> dict:
-    """Load `kittenclaw.toml`, interpolate `${VAR}` references, return the
-    selected preset dict. `preset_name=None` means use `default_preset`."""
+    """Load `kittenclaw.toml` and return the selected preset dict, with `${VAR}`
+    references interpolated. `preset_name=None` means use `default_preset`.
+
+    We select the preset *first*, then interpolate only that preset - so a
+    student who set just one provider's key in `.env` is not forced to also set
+    the keys named by presets they aren't using. (`default_preset` and the
+    model table keys are plain strings, so reading them pre-interpolation is
+    safe.)"""
     raw = tomllib.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    cfg = _interpolate(raw)
-    name = preset_name or cfg["default_preset"]
-    models = cfg.get("models", {})
+    name = preset_name or raw["default_preset"]
+    models = raw.get("models", {})
     if name not in models:
         raise SystemExit(
             f"preset {name!r} not found in kittenclaw.toml - available: {list(models)}"
         )
-    preset = dict(models[name])
+    preset = _interpolate(dict(models[name]))
     preset["_name"] = name
     return preset
 

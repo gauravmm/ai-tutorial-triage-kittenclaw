@@ -50,9 +50,8 @@ def schedule_appointment(date: str, time: str) -> str:
 
 
 def escalate(reason: str) -> str:
-    """Flag a possible emergency. Takes a short `reason`. There are no
-    preconditions on purpose: safety must never be gated on having gathered
-    every detail first."""
+    """Flag a possible emergency. No preconditions on purpose: safety must
+    never be gated on having gathered every detail first."""
     return (
         f"Escalated to the emergency department (reason: {reason}). "
         "The conversation is now closed."
@@ -61,7 +60,7 @@ def escalate(reason: str) -> str:
 
 def no_further_action(reason: str) -> str:
     """Close a contact that needs nothing more (opening hours, confirming an
-    existing booking). Takes a short `reason`."""
+    existing booking)."""
     return (
         f"Closed with no further action (reason: {reason}). "
         "The conversation is now closed."

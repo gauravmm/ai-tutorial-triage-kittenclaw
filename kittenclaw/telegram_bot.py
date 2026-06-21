@@ -75,7 +75,7 @@ def _chunk(text: str, limit: int = CHUNK_LIMIT) -> list[str]:
 
 
 async def _send_disclaimer(update: Update) -> None:
-    """Sticker + text, in that order. The sticker is the kittenclaw logo."""
+    """Send the sticker, then the disclaimer text."""
     chat = update.effective_chat
     assert chat is not None
     try:
@@ -109,12 +109,12 @@ async def _reply(update: Update, text: str) -> None:
 
 
 async def on_disclaimer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """/disclaimer - re-show the welcome message. Does not alter state."""
+    """/disclaimer - re-show the welcome message."""
     await _send_disclaimer(update)
 
 
 async def on_about(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """/about - introduce the bot and link to the source repo. No state change."""
+    """/about - introduce the bot and link to the source repo."""
     chat = update.effective_chat
     assert chat is not None
     await chat.send_message(ABOUT)
@@ -122,8 +122,7 @@ async def on_about(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def on_clear(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """/clear - archive the current conversation. The *next* user message
-    starts a fresh file with serial+1 and re-renders the system prompt
-    against the current skill set."""
+    starts a fresh file with serial+1 and a freshly-read system prompt."""
     chat = update.effective_chat
     assert chat is not None
     locks: dict[int, asyncio.Lock] = context.application.bot_data["locks"]

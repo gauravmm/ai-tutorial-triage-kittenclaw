@@ -58,8 +58,8 @@ _VAR_RE = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)\}")
 
 
 def _interpolate(value: Any) -> Any:
-    """Walk the parsed TOML and substitute `${VAR}` references with their
-    environment value. Unset vars raise - fail fast, no silent fallbacks."""
+    """Recursively substitute `${VAR}` in the parsed TOML with env values.
+    Unset vars raise - fail fast, no silent fallbacks."""
     if isinstance(value, dict):
         return {k: _interpolate(v) for k, v in value.items()}
     if isinstance(value, list):
@@ -83,11 +83,8 @@ def load_config(preset_name: str | None = None) -> dict:
     """Load `kittenclaw.toml` and return the selected preset dict, with `${VAR}`
     references interpolated. `preset_name=None` means use `default_preset`.
 
-    We select the preset *first*, then interpolate only that preset - so a
-    student who set just one provider's key in `.env` is not forced to also set
-    the keys named by presets they aren't using. (`default_preset` and the
-    model table keys are plain strings, so reading them pre-interpolation is
-    safe.)"""
+    Only the *selected* preset is interpolated, so setting one provider's key in
+    `.env` doesn't force you to set keys for presets you aren't using."""
     raw = tomllib.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     name = preset_name or raw["default_preset"]
     models = raw.get("models", {})
@@ -106,9 +103,7 @@ def load_config(preset_name: str | None = None) -> dict:
 
 
 def render_system_prompt() -> str:
-    """Return the system prompt verbatim from `SYSTEM.md` - no templating.
-    Read once at conversation creation (see `new_conversation`) and stored as
-    the first JSONL line, so it's byte-identical on every later turn."""
+    """Return the system prompt verbatim from `SYSTEM.md` - no templating."""
     return SYSTEM_PROMPT_PATH.read_text(encoding="utf-8").strip()
 
 
@@ -132,8 +127,7 @@ def _scan_serials(chat_id: int) -> list[int]:
 
 
 def active_conversation_path(chat_id: int) -> Path | None:
-    """Return the active (top-level, non-archived) conversation file for
-    `chat_id`, or None if there isn't one."""
+    """The active (non-archived) conversation file for `chat_id`, or None."""
     for p in CONVERSATIONS_DIR.iterdir():
         m = _CONV_RE.match(p.name)
         if m and int(m.group(1)) == chat_id:
@@ -142,9 +136,7 @@ def active_conversation_path(chat_id: int) -> Path | None:
 
 
 def has_ever_greeted(chat_id: int) -> bool:
-    """True iff we have any record (active or archived) of this chat - used
-    by the Telegram bot to decide whether to send the first-contact
-    disclaimer. The filesystem *is* the greeted-users state."""
+    """True iff we have any record (active or archived) of this chat."""
     return bool(_scan_serials(chat_id))
 
 
@@ -168,8 +160,7 @@ def read_messages(path: Path) -> list[dict]:
 
 
 def append_message(path: Path, msg: dict) -> None:
-    """Append a single message to the conversation file. One JSON object,
-    terminated by `\\n` - the unit of atomicity."""
+    """Append one message as a `\\n`-terminated JSON line - the unit of atomicity."""
     with jsonlines.open(path, mode="a") as w:
         w.write(msg)
 
@@ -246,12 +237,10 @@ async def turn_loop(
     in a loop (executing tool calls as they come back) until the model
     returns a final text reply, then writes everything in order.
 
-    Returns `(reply_text, ended)`. `ended=True` means the conversation file has
-    been archived and the caller should tell the user it is over - either because
-    the triage bot called a disposition tool (`escalate` / `schedule_appointment`
-    / `no_further_action`), or because the response pushed us past
-    `max_context_tokens`. Both archive the file, so the next user message starts a
-    fresh conversation; the caller does not need to know which reason fired.
+    Returns `(reply_text, ended)`. `ended=True` means the file was archived -
+    either a disposition tool closed the call (`escalate` / `schedule_appointment`
+    / `no_further_action`) or we passed `max_context_tokens`. Either way the next
+    user message starts fresh; the caller need not know which reason fired.
     """
     messages = read_messages(path)
 
@@ -395,8 +384,7 @@ def main() -> None:
     if not token:
         raise SystemExit("TELEGRAM_BOT_TOKEN is not set in .env")
 
-    # Local import so `--help` doesn't require python-telegram-bot to be
-    # importable (handy when students are mid-setup).
+    # Local import so `--help` doesn't require python-telegram-bot.
     from .telegram_bot import run_bot
 
     run_bot(token=token, preset=preset)

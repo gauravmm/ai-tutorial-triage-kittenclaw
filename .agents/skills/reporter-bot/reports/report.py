@@ -42,10 +42,8 @@ def _read_jsonl(path: Path) -> list[dict]:
 
 
 def _disposition(messages: list[dict]) -> dict | None:
-    """Return the terminal marker for the first disposition tool call in the
-    transcript, or None if there is no disposition (so the conversation is not
-    a finished triage call). The shape matches what the old YAML simulator
-    produced, so the reporter prompt sees a familiar conversation."""
+    """Return the terminal marker for the first disposition tool call, or None
+    if there's no disposition (the conversation isn't a finished triage call)."""
     for msg in messages:
         if msg.get("role") != "assistant":
             continue

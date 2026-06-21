@@ -124,8 +124,6 @@ def _scan_serials(chat_id: int) -> list[int]:
     """All serial numbers seen for `chat_id`, across active + archive."""
     serials = []
     for d in (CONVERSATIONS_DIR, ARCHIVE_DIR):
-        if not d.is_dir():
-            continue
         for p in d.iterdir():
             m = _CONV_RE.match(p.name)
             if m and int(m.group(1)) == chat_id:
@@ -136,8 +134,6 @@ def _scan_serials(chat_id: int) -> list[int]:
 def active_conversation_path(chat_id: int) -> Path | None:
     """Return the active (top-level, non-archived) conversation file for
     `chat_id`, or None if there isn't one."""
-    if not CONVERSATIONS_DIR.is_dir():
-        return None
     for p in CONVERSATIONS_DIR.iterdir():
         m = _CONV_RE.match(p.name)
         if m and int(m.group(1)) == chat_id:
@@ -155,7 +151,6 @@ def has_ever_greeted(chat_id: int) -> bool:
 def new_conversation(chat_id: int) -> Path:
     """Create a fresh conversation file for `chat_id` with serial =
     max(existing) + 1 (or 001), seeded with the rendered system message."""
-    CONVERSATIONS_DIR.mkdir(parents=True, exist_ok=True)
     serial = (max(_scan_serials(chat_id), default=0)) + 1
     path = CONVERSATIONS_DIR / f"{chat_id}-{serial:03d}.jsonl"
     system_msg = {"role": "system", "content": render_system_prompt()}
@@ -182,7 +177,6 @@ def append_message(path: Path, msg: dict) -> None:
 def archive(path: Path) -> None:
     """Move an active conversation file into `conversations/archive/`,
     keeping its filename (and therefore its serial) intact."""
-    ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
     shutil.move(str(path), str(ARCHIVE_DIR / path.name))
     log.info("archived %s", path.name)
 
@@ -361,6 +355,7 @@ def main() -> None:
     args = parser.parse_args()
 
     load_dotenv(ROOT / ".env")
+    ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)  # creates CONVERSATIONS_DIR too
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",

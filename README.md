@@ -53,6 +53,9 @@ and closes the call without asking anything. Take a look at the prompt in
 `SYSTEM.md` and improve it. After you edit it, send `/clear` in the chat so your
 new prompt takes effect.
 
+> 🦆 Before you rewrite it, *talk* to the starting bot for a bit — its prompt
+> hides a few surprises. One of them is only a word away. Quack.
+
 ---
 
 ## Reporter Bot

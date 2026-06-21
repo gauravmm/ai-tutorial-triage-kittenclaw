@@ -252,6 +252,9 @@ async def turn_loop(
     auto_clear_threshold = preset["max_context_tokens"]
     max_response = preset["max_response_tokens"]
     disposition_called = False
+    # Text the model emits alongside tool calls, kept so it isn't lost when the
+    # final reply arrives on a later turn.
+    segments: list[str] = []
 
     while True:
         turn += 1
@@ -268,6 +271,8 @@ async def turn_loop(
 
         # If the model called tools, run each and continue the loop.
         if m.tool_calls:
+            if m.content and m.content.strip():
+                segments.append(m.content.strip())
             for tc in m.tool_calls:
                 content = await tools.dispatch(
                     tc.function.name, tc.function.arguments or "{}"
@@ -293,8 +298,10 @@ async def turn_loop(
                 )
             continue
 
-        # No tool calls → this is the final reply.
-        reply = (m.content or "").strip()
+        # No tool calls → this is the final reply. Prepend any text the model
+        # emitted on earlier (tool-calling) turns so none of it is lost.
+        segments.append((m.content or "").strip())
+        reply = "\n\n".join(s for s in segments if s)
 
         # A disposition closed the triage call: archive (same mechanism as
         # /clear) so the next patient message starts a fresh conversation.

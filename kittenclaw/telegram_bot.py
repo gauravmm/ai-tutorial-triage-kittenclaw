@@ -87,16 +87,13 @@ async def _send_disclaimer(update: Update) -> None:
 
 
 async def _reply(update: Update, text: str) -> None:
-    """Send a possibly-long assistant reply to the user. Empty text becomes
-    the `(no content)` placeholder so the user knows the turn ended.
+    """Send a possibly-long assistant reply. Empty text becomes `(no content)`.
 
-    Cheap models reliably emit GitHub-flavored markdown but botch raw HTML or
-    hand-escaped MarkdownV2, so we let them write plain markdown and convert it
-    here: `telegramify_markdown.markdownify` maps it to Telegram's MarkdownV2
-    dialect and escapes the many characters MarkdownV2 treats as special (`.`,
-    `-`, `_`, `(`, ...). We convert the whole reply *before* chunking - slicing
-    raw markdown first could cut a code fence in half and unbalance it. Only
-    this assistant text is formatted; the static status messages stay plain."""
+    Cheap models emit clean GitHub markdown but botch HTML/MarkdownV2, so they
+    write plain markdown and `telegramify_markdown` converts it to MarkdownV2
+    (escaping `.`, `-`, `_`, ...). Convert *before* chunking, else a slice could
+    split a code fence. Only assistant text is formatted; status messages stay
+    plain."""
     chat = update.effective_chat
     assert chat is not None
     if not text.strip():
@@ -178,8 +175,7 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             return
 
         await _reply(update, reply)
-        # `ended` covers both a triage disposition and the max-context auto-clear:
-        # either way the file is archived and the next message starts fresh.
+        # `ended`: disposition or auto-clear archived the file; next msg is fresh.
         if ended:
             await chat.send_message(
                 "✅ This conversation has ended. Send a new message to start another."
@@ -192,10 +188,8 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 
 async def _set_commands(app: Application) -> None:
-    """Push the command menu to Telegram so the client's "/" list matches the
-    handlers below. Telegram caches the last-registered list server-side, so
-    without this a renamed or removed command lingers in the menu until
-    someone clears it by hand. Keep these in sync with the CommandHandlers."""
+    """Push the command menu to Telegram (cached server-side) so the client's
+    "/" list matches the handlers. Keep in sync with the CommandHandlers."""
     await app.bot.set_my_commands(
         [
             ("clear", "Archive this conversation and start fresh"),

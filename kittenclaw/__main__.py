@@ -6,21 +6,16 @@ End-to-end runtime in one file. The control flow you want to understand is
 
 Cache notes for the curious student
 -----------------------------------
-The whole point of this file's shape is to keep the prompt **prefix** byte-
-identical across turns of a conversation, so any provider doing prefix
-caching gets a hit on every call after the first:
+The file's shape keeps the prompt **prefix** byte-identical across turns, so a
+provider doing prefix caching hits on every call after the first:
 
-* The system prompt is the whole behaviour of this triage bot - one static
-  `SYSTEM.md` file. It is read ONCE, when the conversation file is created,
-  and written as the first JSONL line. Subsequent turns read it from disk
-  verbatim - they never re-render. Editing `SYSTEM.md` affects *new*
-  conversations only.
-* Tool results are deterministic in shape (they are whatever the tool
-  returned). They append to the message list, never mutate prior lines.
+* The system prompt (one static `SYSTEM.md`) is read once, at conversation
+  creation, and stored as the first JSONL line - never re-rendered. Editing
+  `SYSTEM.md` affects *new* conversations only.
+* Messages only ever append, never mutate prior lines.
 
-This file keeps the prefix cache-friendly but does not *measure* caching -
-we log only the provider's raw prompt/completion/total token counts from
-`response.usage`. Reading cache-hit telemetry is taught separately.
+We don't *measure* caching here - just log the provider's raw token counts from
+`response.usage`. Cache-hit telemetry is taught separately.
 """
 
 from __future__ import annotations
@@ -111,14 +106,9 @@ def load_config(preset_name: str | None = None) -> dict:
 
 
 def render_system_prompt() -> str:
-    """Return the system prompt verbatim from `SYSTEM.md`.
-
-    There is no templating: this is a single-purpose triage bot, so its whole
-    behaviour lives in one static file. The prompt is read once, when a
-    conversation is created (see `new_conversation`), and stored as the first
-    JSONL line - so it is byte-identical on every later turn and the provider's
-    prefix cache stays warm. Editing `SYSTEM.md` only affects *new*
-    conversations; existing ones keep the prompt they were created with."""
+    """Return the system prompt verbatim from `SYSTEM.md` - no templating.
+    Read once at conversation creation (see `new_conversation`) and stored as
+    the first JSONL line, so it's byte-identical on every later turn."""
     return SYSTEM_PROMPT_PATH.read_text(encoding="utf-8").strip()
 
 
@@ -240,9 +230,7 @@ async def call_model(
         messages=messages,
         tools=tools.TOOL_SCHEMAS,
         max_tokens=preset["max_response_tokens"],
-        # REVIEW: assuming the SDK ≥1.40 path (max_tokens auto-routed to
-        # max_completion_tokens for o-series). If a student hits a rejection
-        # on a strict proxy, rename to `max_completion_tokens=` here.
+        # If a strict proxy rejects max_tokens, rename to max_completion_tokens.
     )
 
 
@@ -289,10 +277,8 @@ async def turn_loop(
         choice = resp.choices[0]
         m = choice.message
 
-        # Persist the assistant message in the *exact* wire shape we'll send
-        # back next time. `model_dump()` gives us that for free.
-        # REVIEW: `exclude_none=True` strips e.g. `tool_calls: None`, which
-        # is what the API expects to omit anyway. Keeps JSONL tidy.
+        # Persist the assistant message in the exact wire shape we'll resend.
+        # exclude_none strips e.g. `tool_calls: None`, which the API omits anyway.
         assistant_msg = m.model_dump(exclude_none=True)
         messages.append(assistant_msg)
         append_message(path, assistant_msg)
@@ -310,10 +296,9 @@ async def turn_loop(
                 }
                 messages.append(tool_msg)
                 append_message(path, tool_msg)
-                # A disposition tool closes the call. We remember it and let the
-                # model emit its closing line on the *next* turn (e.g. "I've
-                # booked you for ..."), then archive below - so that closing
-                # message is part of the saved transcript, not lost.
+                # A disposition closes the call. Remember it, let the model emit
+                # its closing line next turn, then archive below - so that line
+                # stays in the transcript.
                 if tc.function.name in tools.DISPOSITION_TOOLS:
                     disposition_called = True
                 log.debug(
@@ -381,10 +366,7 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
         stream=sys.stderr,
     )
-    # httpx logs one INFO line per request ("HTTP Request: POST ... 200 OK").
-    # Every model call goes through it (the openai SDK uses httpx underneath),
-    # which drowns out our one-line-per-turn token summary. Mute it to WARNING;
-    # --verbose can't bring it back, which is the point.
+    # Mute httpx's one-INFO-line-per-request noise so our token summary shows.
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
     preset = load_config(args.preset)
@@ -395,10 +377,9 @@ def main() -> None:
         preset["base_url"],
     )
 
-    # --once drives a single turn through the same turn_loop the bot uses,
-    # then exits - no Telegram token, no polling. Repeated calls reuse one
-    # synthetic chat_id so the conversation file continues across them; the
-    # rendered reply goes to stdout while logging stays on stderr.
+    # --once drives a single turn through the same turn_loop, then exits - no
+    # Telegram. Repeated calls reuse the --chat id so the conversation continues;
+    # reply goes to stdout, logging to stderr.
     if args.once is not None:
         client = make_client(preset)
         chat_id = args.chat  # default 0; --chat N gives an independent thread
@@ -412,9 +393,6 @@ def main() -> None:
                 user_text=args.once,
             )
         )
-        # `ended` = a disposition closed the call (or the context budget tripped);
-        # either way this conversation is archived and the next --once on this
-        # --chat id starts fresh.
         print(reply + ("\n[conversation ended]" if ended else ""))
         return
 

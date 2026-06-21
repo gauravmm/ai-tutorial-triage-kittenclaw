@@ -5,18 +5,13 @@ of them *closes the conversation*:
 - `escalate`             - flag a possible emergency.
 - `no_further_action`    - close a non-clinical contact.
 
-Each is a plain function that validates its arguments and returns a short
-confirmation string. They do **not** touch the filesystem: archiving the closed
-conversation is the turn loop's job (see `turn_loop` in `__main__.py`), which is
-the only place that moves conversation files. That keeps "the conversation file
-is the messages list" true here - a disposition is just a tool call in the
-transcript, with its outcome in the call arguments.
+Each validates its arguments and returns a short confirmation string. They do
+**not** touch the filesystem - archiving the closed conversation is the turn
+loop's job (`turn_loop` in `__main__.py`), the only place that moves files.
 
-`DISPOSITION_TOOLS` names the three so the turn loop can spot when a call has
-been closed. The dispatcher catches *all* exceptions and returns them as
-`{"error": "<ExceptionClass>: <message>"}`, so a bad argument (e.g. a malformed
-date) comes back to the model as a normal `tool` message it can correct - the
-turn loop never crashes on one tool call.
+`DISPOSITION_TOOLS` lets the turn loop spot a closing call. The dispatcher
+catches all exceptions and returns them as `{"error": "..."}`, so a bad argument
+comes back to the model as a normal `tool` message it can correct.
 """
 
 from __future__ import annotations
@@ -142,12 +137,11 @@ TOOL_SCHEMAS = [
 # Dispatcher
 # ---------------------------------------------------------------------------
 
-# Map tool name → (callable, is_async). All three are sync, but the loop keeps
-# the same shape KittenClaw uses elsewhere so adding an async tool is one flag.
+# Map tool name → callable. All three are sync.
 _HANDLERS = {
-    "schedule_appointment": (schedule_appointment, False),
-    "escalate": (escalate, False),
-    "no_further_action": (no_further_action, False),
+    "schedule_appointment": schedule_appointment,
+    "escalate": escalate,
+    "no_further_action": no_further_action,
 }
 
 
@@ -159,8 +153,7 @@ async def dispatch(name: str, arguments_json: str) -> str:
         args = json.loads(arguments_json) if arguments_json else {}
         if name not in _HANDLERS:
             raise ValueError(f"unknown tool: {name}")
-        fn, is_async = _HANDLERS[name]
-        result = await fn(**args) if is_async else fn(**args)
+        result = _HANDLERS[name](**args)
         # The model expects a string; JSON-encode non-strings.
         return result if isinstance(result, str) else json.dumps(result)
     except Exception as exc:

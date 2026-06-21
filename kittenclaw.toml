@@ -36,3 +36,14 @@ model = "openrouter/free"
 max_context_tokens = 24000
 max_response_tokens = 4096
 api_key = "${OPENROUTER_API_KEY}"
+
+# Fallback endpoint hosted by the course organizer, in case the free public
+# providers above are rate-limited, down, or unreachable from the venue WiFi.
+# Ask the organizer for the key (OCELLIVISION_API_KEY) — it's shared, so be
+# considerate with it. qwen3.6-27b tool-calls reliably.
+[models.ocellivision]
+base_url = "https://llm.ocelli.vision/"
+model = "qwen3.6-27b"
+max_context_tokens = 24000
+max_response_tokens = 4096
+api_key = "${OCELLIVISION_API_KEY}"
